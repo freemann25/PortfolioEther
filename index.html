@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Achour Hammi | Portfolio</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --cosmic-purple: #0f0c29;
+            --deep-blue: #302b63;
+            --vibrant-purple: #8e2de2;
+            --ethereal-gold: #fbc02d;
+            --vibrant-blue: #00d4ff;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: radial-gradient(circle at center, #1b1b3a 0%, #0f0c29 100%);
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .hex-bg {
+            position: absolute;
+            inset: 0;
+            opacity: 0.1;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100' viewBox='0 0 56 100'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%23ffffff' stroke-width='1'/%3E%3C/svg%3E");
+            background-size: 56px 100px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .orb-container {
+            position: relative;
+            width: 350px;
+            height: 350px;
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .orb-container.full-view {
+            width: 100vw;
+            height: 100vh;
+            z-index: 2000;
+        }
+
+        .main-orb {
+            width: 220px;
+            height: 220px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, var(--ethereal-gold) 0%, var(--vibrant-purple) 40%, var(--vibrant-blue) 100%);
+            box-shadow: 0 0 80px rgba(142, 45, 226, 0.3), inset -10px -10px 30px rgba(0,0,0,0.5);
+            animation: float 6s infinite ease-in-out;
+            cursor: pointer;
+            z-index: 5;
+            transition: all 1s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .full-view .main-orb {
+            width: 95%;
+            height: 90%;
+            max-width: 1100px;
+            max-height: 85vh;
+            border-radius: 40px;
+            animation: none;
+            background: rgba(15, 12, 41, 0.98);
+            backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 0;
+            cursor: default;
+        }
+
+        /* Click Indicator Styling */
+        .click-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+        
+        .full-view .click-indicator {
+            display: none;
+            opacity: 0;
+        }
+
+        .hand-icon {
+            animation: point-down 1.5s infinite ease-in-out;
+        }
+
+        @keyframes point-down {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(8px); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-15px); }
+        }
+
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+            cursor: pointer;
+            z-index: 2;
+        }
+
+        .bubble.active-bubble {
+            transform: translate(var(--center-x), var(--center-y)) scale(2.2) !important;
+            background: rgba(251, 192, 45, 0.15);
+            border-color: var(--ethereal-gold);
+            z-index: 50;
+        }
+
+        .is-focusing .main-orb:not(.full-view-active) { filter: blur(15px); opacity: 0.3; transform: scale(0.8); }
+        .is-focusing .bubble:not(.active-bubble) { opacity: 0; pointer-events: none; }
+        .full-view .bubble, .full-view .header-text, .full-view .glass-dock { opacity: 0; pointer-events: none; }
+
+        .portfolio-content {
+            display: none;
+            opacity: 0;
+            transition: 0.5s;
+            height: 100%;
+            overflow-y: auto;
+            text-align: left;
+        }
+
+        .full-view .portfolio-content {
+            display: block;
+            opacity: 1;
+        }
+
+        .info-panel {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.9);
+            width: 90%;
+            max-width: 480px;
+            max-height: 70vh;
+            background: rgba(15, 12, 41, 0.85);
+            backdrop-filter: blur(40px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 32px;
+            padding: 32px;
+            z-index: 100;
+            opacity: 0;
+            visibility: hidden;
+            transition: 0.5s;
+            overflow-y: auto;
+        }
+
+        .info-panel.visible {
+            opacity: 1;
+            visibility: visible;
+            transform: translate(-50%, -50%) scale(1);
+        }
+
+        .glass-dock {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 40px;
+            padding: 10px 20px;
+            display: flex;
+            gap: 20px;
+            z-index: 1000;
+            transition: 0.5s;
+        }
+
+        .nav-item { color: rgba(255,255,255,0.4); cursor: pointer; transition: 0.3s; padding: 10px; }
+        .nav-item.active { color: var(--ethereal-gold); transform: translateY(-5px); }
+
+        .close-btn {
+            position: absolute;
+            top: 25px;
+            right: 25px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            z-index: 2100;
+            color: white;
+            font-size: 20px;
+        }
+        .full-view .close-btn { display: flex; }
+
+        .custom-scroll::-webkit-scrollbar { width: 6px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+        
+        .section-card {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 24px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+        .section-card:hover {
+            border-color: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.05);
+        }
+    </style>
+</head>
+<body id="mainBody">
+    <canvas id="bg-canvas"></canvas>
+    <div class="hex-bg"></div>
+
+    <div class="header-text absolute top-10 w-full text-center z-20 pointer-events-none transition-opacity duration-500">
+        <h1 class="text-4xl font-light tracking-[10px]">ACHOUR HAMMI</h1>
+        <p class="text-[10px] opacity-50 tracking-[4px] uppercase mt-2">Software Engineer | AI Specialist</p>
+    </div>
+
+    <!-- Info Panels -->
+    <div id="panel-1" class="info-panel custom-scroll">
+        <div class="mb-6">
+            <h2 class="text-2xl font-bold text-yellow-400">Bio</h2>
+            <p class="text-xs opacity-60 uppercase tracking-widest mt-1">Personal Profile</p>
+        </div>
+        <div class="space-y-4">
+            <p class="text-sm leading-relaxed opacity-80">
+                Hi, I’m Achour Hammi, a passionate learner in software engineering with a focus on AI application development. My mission is to use technology to solve real community problems.
+            </p>
+            <div class="bg-white/5 p-4 rounded-xl border border-white/10 text-xs">
+                <span class="text-yellow-400 font-bold">Growth Mindset:</span> Learning from failures as stepping stones and organizing my time with discipline.
+            </div>
+        </div>
+    </div>
+
+    <div id="panel-2" class="info-panel custom-scroll">
+        <h2 class="text-xl font-bold mb-6 border-b border-white/10 pb-2 text-blue-400">Education</h2>
+        <div class="space-y-4">
+            <div class="bg-white/5 p-3 rounded-xl">
+                <h4 class="font-bold text-blue-300">Computer Science & Mathematics</h4>
+                <p class="text-[10px] opacity-60">USMS, Beni Mellal - Khenifra</p>
+            </div>
+            <div class="bg-white/5 p-3 rounded-xl">
+                <h4 class="font-bold text-blue-300">AI Augmented Professional Dev</h4>
+                <p class="text-[10px] opacity-60">Digital Age Certification — 2024</p>
+            </div>
+            <div class="bg-white/5 p-3 rounded-xl">
+                <h4 class="font-bold text-blue-300">Baccalaureate</h4>
+                <p class="text-[10px] opacity-60">Wawizaght, Beni Mellal - Khenifra — 2018</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="panel-3" class="info-panel custom-scroll">
+        <h2 class="text-xl font-bold mb-4 text-purple-400">Technical Stack</h2>
+        <div class="grid grid-cols-2 gap-2 text-[11px]">
+            <div class="p-2 border border-white/10 rounded-lg bg-white/5">AI App Dev</div>
+            <div class="p-2 border border-white/10 rounded-lg bg-white/5">Cybersecurity</div>
+            <div class="p-2 border border-white/10 rounded-lg bg-white/5">Web Design</div>
+            <div class="p-2 border border-white/10 rounded-lg bg-white/5">React / Tailwind</div>
+        </div>
+    </div>
+
+    <div id="panel-4" class="info-panel text-center custom-scroll">
+        <h2 class="text-xl font-bold mb-6 text-red-400">Goals</h2>
+        <div class="space-y-3 text-left text-xs opacity-80 leading-loose">
+            <p>• Solving community problems via tech.</p>
+            <p>• Strengthening infrastructure & sustainability.</p>
+            <p>• Innovating in the field of AI and Cybersecurity.</p>
+        </div>
+    </div>
+
+    <!-- Main Scene -->
+    <div id="orb-scene" class="orb-container">
+        <div class="main-orb" id="centerOrb">
+            <!-- Click Indicator (Hand and Text) -->
+            <div class="click-indicator">
+                <svg class="hand-icon" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v5" />
+                    <path d="M14 10V4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v10" />
+                    <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
+                    <path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15" />
+                </svg>
+                <span class="text-[10px] uppercase tracking-[3px] font-bold text-white/90">Click Here</span>
+            </div>
+
+            <div class="close-btn" id="closeFullView">✕</div>
+            
+            <div class="portfolio-content custom-scroll p-6 md:p-12">
+                <div class="max-w-5xl mx-auto">
+                    <header class="mb-16">
+                        <h1 class="text-5xl md:text-7xl font-bold text-yellow-400 mb-4">Achour Hammi</h1>
+                        <p class="text-xl md:text-2xl opacity-60 font-light max-w-2xl">Software Engineer & AI Application Developer focused on community-driven technology.</p>
+                    </header>
+
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-8">
+                        <!-- About Me -->
+                        <section class="md:col-span-7 section-card">
+                            <h2 class="text-2xl font-bold mb-6 text-yellow-400 flex items-center gap-3">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                About My Mission
+                            </h2>
+                            <p class="text-sm leading-relaxed opacity-80 mb-4">
+                                Hi, I’m Achour Hammi. I believe growth comes through challenges, and I’ve built a clear plan to overcome mine: strengthening self-confidence, organizing my time with discipline, and continuously learning from failures as stepping stones.
+                            </p>
+                            <p class="text-sm leading-relaxed opacity-80">
+                                My focus lies in education, infrastructure, and sustainability, using AI to bridge gaps and create impactful solutions.
+                            </p>
+                        </section>
+
+                        <!-- Experience -->
+                        <section class="md:col-span-5 section-card">
+                            <h2 class="text-2xl font-bold mb-6 text-purple-400">Experience</h2>
+                            <div class="space-y-6">
+                                <div>
+                                    <h4 class="font-bold text-white text-sm">Freelance Web Designer</h4>
+                                    <p class="text-[11px] text-purple-300">InnovateTech Inc. • 2020 - Present</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-white text-sm">Lead Designer</h4>
+                                    <p class="text-[11px] text-purple-300">XYZ Creative Agency • 2015 - 2019</p>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold text-white text-sm">Senior Web Designer</h4>
+                                    <p class="text-[11px] text-purple-300">ABC Web Studio • 2010 - 2015</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <!-- Portfolio Projects -->
+                        <section class="md:col-span-12 section-card">
+                            <h2 class="text-2xl font-bold mb-8 text-blue-400">Featured Projects</h2>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                                <div class="bg-white/5 p-6 rounded-3xl border border-white/10 group hover:bg-white/10 transition-all">
+                                    <h4 class="font-bold text-xl text-blue-300 mb-2">Phase 2 Project Video</h4>
+                                    <p class="text-sm opacity-60 mb-6">A deep dive into my latest AI-integrated development project.</p>
+                                    <a href="https://youtube.com/shorts/QNSD6sslymg?si=yCQ09UTjKWynHD3V" target="_blank" class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-yellow-400 hover:text-white transition-colors">
+                                        Watch on YouTube 
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                                    </a>
+                                </div>
+                                
+                                <div class="bg-white/5 p-6 rounded-3xl border border-white/10 group hover:bg-white/10 transition-all">
+                                    <h4 class="font-bold text-xl text-blue-300 mb-2">Project Slide Deck</h4>
+                                    <p class="text-sm opacity-60 mb-6">Comprehensive documentation and architectural overview in PDF format.</p>
+                                    <a href="https://drive.google.com/file/d/1DEYpGIgrNX01TehcVupJg8fZgfYRKcK8/view?usp=sharing" target="_blank" class="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-yellow-400 hover:text-white transition-colors">
+                                        View Slide Deck 
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3"/></svg>
+                                    </a>
+                                </div>
+                            </div>
+                        </section>
+                    </div>
+
+                    <footer class="mt-16 text-center pb-20 border-t border-white/10 pt-16">
+                        <p class="text-[10px] opacity-40 uppercase tracking-[5px] mb-8">Ready for new challenges</p>
+                        <div class="flex flex-wrap justify-center gap-4">
+                            <a href="mailto:achour.hammi@example.com" class="bg-gradient-to-r from-yellow-400 to-orange-500 text-black px-12 py-4 rounded-full font-bold shadow-xl shadow-yellow-400/10 hover:scale-105 transition-transform">
+                                Contact Me
+                            </a>
+                            <a href="#" class="border border-white/20 hover:bg-white/10 px-12 py-4 rounded-full font-bold transition-all">
+                                Elevate Pitch
+                            </a>
+                        </div>
+                    </footer>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bubbles -->
+        <div class="bubble" id="bubble-1" style="width: 60px; height: 60px; top: -80px; left: -20px; --center-x: 0px; --center-y: 100px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v8M8 12h8"/></svg>
+        </div>
+        <div class="bubble" id="bubble-2" style="width: 80px; height: 80px; top: 60px; right: -100px; --center-x: -90px; --center-y: 0px;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zM22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+        </div>
+        <div class="bubble" id="bubble-3" style="width: 55px; height: 55px; bottom: -40px; left: -80px; --center-x: 70px; --center-y: -70px;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+        </div>
+        <div class="bubble" id="bubble-4" style="width: 45px; height: 45px; bottom: 80px; right: -110px; --center-x: -40px; --center-y: -90px;">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l2.27-2.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+        </div>
+    </div>
+
+    <nav class="glass-dock">
+        <div class="nav-item active" data-target="1"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+        <div class="nav-item" data-target="2"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 6 4 14-8-3-8 3 4-14"/><path d="M12 3v3"/></svg></div>
+        <div class="nav-item" data-target="3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg></div>
+        <div class="nav-item" data-target="4"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+    </nav>
+
+    <script>
+        const canvas = document.getElementById('bg-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const particleCount = 100;
+        let mouse = { x: null, y: null, radius: 150 };
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.onresize = resize;
+        resize();
+
+        window.addEventListener('mousemove', (e) => { mouse.x = e.x; mouse.y = e.y; });
+
+        class Particle {
+            constructor() {
+                this.x = Math.random() * canvas.width;
+                this.y = Math.random() * canvas.height;
+                this.vx = (Math.random() - 0.5) * 0.5;
+                this.vy = (Math.random() - 0.5) * 0.5;
+                this.size = Math.random() * 2 + 0.5;
+                this.density = (Math.random() * 30) + 1;
+            }
+            update() {
+                this.x += this.vx; 
+                this.y += this.vy;
+                if(this.x < 0 || this.x > canvas.width) this.vx *= -1;
+                if(this.y < 0 || this.y > canvas.height) this.vy *= -1;
+
+                if (mouse.x != null) {
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance < mouse.radius) {
+                        let force = (mouse.radius - distance) / mouse.radius;
+                        this.x -= (dx / distance) * force * this.density;
+                        this.y -= (dy / distance) * force * this.density;
+                    }
+                }
+            }
+            draw() {
+                ctx.fillStyle = "rgba(255,255,255,0.4)";
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        for(let i=0; i<particleCount; i++) particles.push(new Particle());
+
+        function animate() {
+            ctx.clearRect(0,0,canvas.width, canvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            ctx.lineWidth = 0.3;
+            for(let i=0; i<particles.length; i++) {
+                for(let j=i+1; j<particles.length; j++) {
+                    const dist = Math.hypot(particles[i].x - particles[j].x, particles[i].y - particles[j].y);
+                    if(dist < 110) {
+                        ctx.strokeStyle = `rgba(142, 45, 226, ${0.2 * (1 - dist/110)})`;
+                        ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y);
+                        ctx.lineTo(particles[j].x, particles[j].y); ctx.stroke();
+                    }
+                }
+            }
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        const navItems = document.querySelectorAll('.nav-item');
+        const bubbles = document.querySelectorAll('.bubble');
+        const panels = document.querySelectorAll('.info-panel');
+        const orbScene = document.getElementById('orb-scene');
+        const centerOrb = document.getElementById('centerOrb');
+
+        function resetAll() {
+            orbScene.classList.remove('is-focusing', 'full-view');
+            centerOrb.classList.remove('full-view-active');
+            bubbles.forEach(b => b.classList.remove('active-bubble'));
+            panels.forEach(p => p.classList.remove('visible'));
+            navItems.forEach(n => n.classList.remove('active'));
+        }
+
+        function activateTab(id) {
+            resetAll();
+            const nav = document.querySelector(`.nav-item[data-target="${id}"]`);
+            if(nav) nav.classList.add('active');
+            orbScene.classList.add('is-focusing');
+            document.getElementById(`bubble-${id}`).classList.add('active-bubble');
+            document.getElementById(`panel-${id}`).classList.add('visible');
+        }
+
+        navItems.forEach(item => {
+            item.onclick = (e) => { e.stopPropagation(); activateTab(item.dataset.target); };
+        });
+
+        bubbles.forEach(b => {
+            b.onclick = (e) => { e.stopPropagation(); activateTab(b.id.split('-')[1]); };
+        });
+
+        centerOrb.onclick = (e) => {
+            if (orbScene.classList.contains('full-view')) return;
+            e.stopPropagation();
+            resetAll();
+            orbScene.classList.add('full-view');
+            centerOrb.classList.add('full-view-active');
+        };
+
+        document.getElementById('closeFullView').onclick = (e) => {
+            e.stopPropagation();
+            resetAll();
+        };
+
+        document.addEventListener('mousedown', (e) => {
+            let insidePanel = false;
+            panels.forEach(p => { if(p.contains(e.target)) insidePanel = true; });
+            let insideNav = document.querySelector('.glass-dock').contains(e.target);
+            let insideBubbles = false;
+            bubbles.forEach(b => { if(b.contains(e.target)) insideBubbles = true; });
+            let isOrb = centerOrb.contains(e.target);
+            if (!insidePanel && !insideNav && !insideBubbles && !isOrb) resetAll();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if(!orbScene.classList.contains('is-focusing') && !orbScene.classList.contains('full-view')) {
+                const x = (window.innerWidth / 2 - e.pageX) / 45;
+                const y = (window.innerHeight / 2 - e.pageY) / 45;
+                orbScene.style.transform = `translate(${x}px, ${y}px)`;
+            }
+        });
+    </script>
+</body>
+</html>
